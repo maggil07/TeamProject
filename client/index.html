@@ -1,0 +1,1677 @@
+<!-- COMP 4770 Final Project Submission
+      Authors and student numbers: Matthew Gilchrist 200942688, Jan Mertlik 201313194, Alberto Briceno 201203346
+
+
+      This program uses HTML5, JavaScript, and CSS to utilize the Bootstrap library,
+      Express.js and MongoDB to create a game that runs in the Google Chrome browser
+      on an HTML5 canvas. For each player a unique collection within the database
+      is created and the progress of the player is stored. Also included in the
+      database is the custom levels that have been created by the user. Therefore
+      this game allows the player to progress through levels using different
+      weapons while facing different kinds of enemeies.
+
+      This game is called Uni_X and it explores the life of a student while attending
+      university. The player will experience various challenges that come with
+      balancing school, home and work while trying to obtain a degree.
+
+      To obtain win the game the player must complete all the courses from each
+      of the three faculties, Math, Computer Science, Physics and Philosophy. <thead>
+      catch is that the player is required to pay for each level (course) before
+      they can attempt it. Each level contains a Midterm and a Final, defeating
+      the Midterm saves the players progress and defeating the Final passes the course.
+      The courses are dry and repetitive and the work that needs to be done to complete them is
+      just as annoying.
+
+      In order to pay for courses the player must use various items from their
+      inventory. These incluede, money Dad Credits and Work Credits. Money pays
+      for the courses while Dad Credits and Work Credits allow the player tertl
+      make money. Each completed course results in the player gaining both types of
+      Credits. Work Credits can be used to work and Dad Credits are the amount of
+      times the player can recieve money from their Dad. The last source of income
+      the player has is to bother their Grandma. It is the source of the largest
+      sum of money in the game but is ment to be used only as a last resort
+      because with each request for money she becomes more worried and she won't
+      be around forever.
+
+
+      -->
+<!DOCTYPE HTML>
+<HTML>
+
+<head>
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+    <link rel="stylesheet" type="text/css" href="/css/styles.css">
+    <!-- <link href="/styles.css"> -->
+    <script type="text/javascript;charset=utf-8" async src="js/inventory.js"></script>
+</head>
+<script src="js/entity.js"></script>
+<script src="js/levelEditor.js"></script>
+<script src="js/levelLoad.js"></script>
+<script src="js/levelSave.js"></script>
+<script src="js/inventory.js"></script>
+<script src="js/CampaignManager.js"></script>
+<script src="js/Input.js"></script>
+
+<script src="https://cdn.socket.io/socket.io-1.4.5.js"></script>
+
+<body>
+    <!--  The following divs are for the various menu screens in the game  -->
+    <div id="menuWrapper">
+        <div id="menuDiv">
+            <div id="logoIMG">
+                <img src="./img/Uni_X.png" alt="game logo">
+            </div>
+            <div id="signDiv">
+                <input id="signDiv-username" type="text" placeholder="Username"> </input>
+                <br>
+                <input id="signDiv-password" type="password" placeholder="Password"></input>
+                <button class="button1" id="signDiv-signIn">Sign In</button>
+                <button class="button1" id="signDiv-signUp">Sign Up</button>
+            </div>
+
+            <div id="mainMenu" style="display:none;">
+                <button class="button2" id="profile">Profile </button>
+                <button class="button2" id="newGame">New Game</button>
+                <button class="button2" id="loadGame">Load Game</button>
+                <button class="button2" id="levelEditorB">Level Editor</button>
+
+            </div>
+
+            <div id="campaignInput" style="display:none; text-align: center;">
+                <form>
+                    <input type="text" id="playerName" placeholder="Player Name">
+                    <br>
+                    <input class="ngRadio" type="radio" name="difficulty" value="0" checked> Easy
+                    <br>
+                    <input class="ngRadio" type="radio" name="difficulty" value="1"> Medium
+                    <br>
+                    <input class="ngRadio" type="radio" name="difficulty" value="2"> Hard
+                </form>
+                <button class="button3" id="startNewGame">Start New Game</button>
+            </div>
+
+            <div id="loadFile" style="display:none;">
+                <p>Campaigns</p>
+            </div>
+
+            <div id="playerProfile" style="display:none;">
+                UserName :
+                <input type="text" id="username" value=username>
+                <select id="controlSelect">
+                </select>
+                <input type="text" id="inputControl">
+
+                <table id="controlsTable" class="table-striped table-dark" align="center">
+                    <tr>
+                        <th>Action</th>
+                        <th>Control</th>
+                    </tr>
+                </table>
+
+            </div>
+
+            <div id="back" style="display:none;">
+                <button class="button1" onclick="backMainMenu()">Back</button>
+            </div>
+
+            <div id="profileDiv" style="display:none;">
+                <button onclick="showProfile()">Profile</button>
+            </div>
+
+        </div>
+
+    </div>
+      <!-- The following divs are for success and failure screens for <thead>
+           level editor and for campaign gameplay.
+      -->
+    <div id="deathScreen" style="display:none;">
+        <div id="logoIMG">
+            <img src="./img/FAIL.png" alt="game logo">
+        </div>
+        <button onclick="afterdeath()" class="button3"> Go Back to Campus </button>
+    </div>
+
+    <div id="deathScreenLE" style="display:none;">
+        <div id="logoIMG">
+            <img src="./img/FAIL.png" alt="game logo">
+        </div>
+        <button onclick="afterdeathLE()" class="button3"> Go Back to Level Editor </button>
+    </div>
+
+    <div id="succsessScreen" style="display:none;">
+        <div id="logoIMG">
+            <img src="./img/youpassed.png" alt="game logo">
+        </div>
+        <div id="stats">
+            <h2 id="passLevelHeading">You completed the time in: </h2>
+
+        </div>
+        <button onclick="aftersuccess()" class="button3"> Go Back to Campus </button>
+    </div>
+
+    <div id="succsessScreenLE" style="display:none;">
+        <div id="logoIMG">
+            <img src="./img/youpassed.png" alt="game logo">
+        </div>
+        <div id="stats">
+            <h2 id="passLevelHeadingLE">You completed the time in: </h2>
+
+        </div>
+        <button onclick="aftersuccessLE()" class="button3"> Go Back to Level Editor </button>
+    </div>
+    <!--This coursesButtonGroup div houses the level selection of each of the
+        faculties as well as the main places of work.
+    -->
+    <div id="coursesButtonGroup">
+        <div id="mathMenu" style="display:none;">
+
+            <h2 id="levelHeading"> Choose which Math Level to Play: </h2>
+
+            <button class="button3" id="MATH1000">Math 1000</button>
+            <button class="button3" id="MATH2000">Math 2000</button>
+            <button class="button3" id="MATH3000">Math 3000</button>
+            <button class="button3" id="MATH4000">Math 4000</button>
+            <button class="button3" id="backCourse">Back</button>
+
+        </div>
+
+        <div id="physMenu" style="display:none;">
+
+            <h2 id="levelHeading"> Choose which Physics Level to Play: </h2>
+
+            <button class="button3" id="PHYS1000">Physics 1000</button>
+            <button class="button3" id="PHYS2000">Physics 2000</button>
+            <button class="button3" id="PHYS3000">Physics 3000</button>
+            <button class="button3" id="PHYS4000">Physics 4000</button>
+            <button class="button3" id="backCourse">Back</button>
+
+        </div>
+
+        <div id="compMenu" style="display:none;">
+
+            <h2 id="levelHeading"> Choose which Computer Science Level to Play: </h2>
+
+            <button class="button3" id="COMP1000">Computer Science 1000</button>
+            <button class="button3" id="COMP2000">Computer Science 2000</button>
+            <button class="button3" id="COMP3000">Computer Science 3000</button>
+            <button class="button3" id="COMP4000">Computer Science 4000</button>
+            <button class="button3" id="backCourse">Back</button>
+
+        </div>
+
+        <div id="philMenu" style="display:none;">
+
+            <h2 id="levelHeading"> Choose which Philosophy Level to Play: </h2>
+
+            <button class="button3" id="PHIL1000">Philoshophy 1000</button>
+            <button class="button3" id="PHIL1000">Philoshophy 2000</button>
+            <button class="button3" id="PHIL1000">Philoshophy 3000</button>
+            <button class="button3" id="PHIL1000">Philoshophy 4000</button>
+            <button class="button3" id="backCourse">Back</button>
+
+        </div>
+        <!-- The following divs are the menus for the various sources of income
+            in the game
+        -->
+        <div id="landscapingWork" style="display:none;">
+
+            <h2 id="levelHeading">Welcome to your Dad's Landscaping</h2>
+            <button class="button3" id="LandscapeButton">Go to Work</button>
+            <button class="button3" id="backCourse">Back</button>
+
+        </div>
+
+        <div id="grandmaHouse" style="display:none;">
+
+            <h2 id="pinklevelHeading">Hi Sweetie!</h2>
+            <button class="button3" id="GrandmaButton">Ask for Money</button>
+            <button class="button3" id="backCourse">Back</button>
+
+        </div>
+
+        <div id="grandmaHouseAfter" style="display:none;">
+
+            <h2 id="blacklevelHeading">She is gone now...</h2>
+            <button class="button3" id="backCourse">Back</button>
+
+        </div>
+
+        <div id="winery" style="display:none;">
+
+            <h2 id="levelHeading">Welcome to Wanda's Winery</h2>
+            <button class="button3" id="wineryButton">Go to work</button>
+            <button class="button3" id="backCourse">Back</button>
+
+        </div>
+
+        <div id="dadHouse" style="display:none;">
+
+            <h2 id="levelHeading">Welcome Home</h2>
+            <button class="button3" id="dadButton">Ask for Money</button>
+            <button class="button3" id="backCourse">Back</button>
+
+        </div>
+
+        <div id="fishHouse" style="display:none;">
+
+            <h2 id="levelHeading">Feelin' Lucky?</h2>
+            <button class="button3" id="fishButton">Go Fish!</button>
+            <button class="button3" id="backCourse">Back</button>
+
+        </div>
+    </div>
+    <!-- Main game div -->
+    <div id="gameDiv" style="display:none;">
+        <button class="specialBack" onclick="backMainMenu()">Back</button>
+        <div id="game" style="position:absolute;width:1280px;height:720px">
+            <canvas id="ctx" width="1280" height="720" style="position:absolute;border:1px solid #000000;"></canvas>
+            <canvas id="ctx-ui" width="1280" height="720" style="position:absolute;border:1px solid #000000;"></canvas>
+        </div>
+    </div>
+
+    <script>
+        var globalValueButton = "null"
+        function globalChange(x) {
+            globalValueButton = x;
+        }
+    </script>
+    <!-- Level Editor div -->
+    <div id="levelEditor" style="display:none;">
+        <div id="editor" style="position:absolute;width:1280px;height:720px;">
+            <canvas id="ctxLE" width="1280" height="720" style="position:absolute;border:1px solid #000000;"></canvas>
+            <canvas id="ctx_uiLE" width="1280" height="720" style="position:absolute;border:1px solid #000000;"></canvas>
+
+        </div>
+
+        <div id="leftToolbar" style="position: absolute; top: 730px; ">
+            <a href="#" onclick="globalChange('p')"> <img src="./img/player_icon.png"> </a>
+            <a href="#" onclick="globalChange('f')"> <img src="./img/platform_icon.png"> </a>
+            <a href="#" onclick="globalChange('e')"> <img src="./img/enemy_icon.png"> </a>
+            <a href="#" onclick="globalChange('a')"> <img src="./img/assigment_icon.png"> </a>
+            <a href="#" onclick="globalChange('b')"> <img src="./img/breakable_icon.png"> </a>
+            <a href="#" onclick="globalChange('m')"> <img src="./img/midterm_icon.png"> </a>
+            <a href="#" onclick="globalChange('l')"> <img src="./img/final_icon.png"> </a>
+            <a href="#" onclick="globalChange('d')"> <img src="./img/delete_icon.png"> </a>
+        </div>
+
+        <div id="rightToolbar" style="position: absolute; right: 0px; top: 730px;">
+            <button class="toolbarButton" onclick="backMainMenu()" style="display: inline-block;"> <img src="./img/back_icon.png"> </button>
+            <div id="save">
+                <button class="toolbarButton" id="savebutton" style="display: inline-block;"> <img src="./img/save_icon.png"> </button>
+            </div>
+            <button class="toolbarButton" id="play" style="display: inline-block;"> <img src="./img/play_icon.png"> </button>
+            <div id="aSelect2" style="display: inline-block;">
+                <select id="background" onchange="facChange()">
+                    <option id="math" value="img/math1.png" selected="selected">Math</option>
+                    <option id="phil" value="img/phil1.png">Philosophy</option>
+                    <option id="phys" value="img/phy1.png">Physics</option>
+                    <option id="comp" value="img/cs1.png">Computer Science</option>
+                </select>
+            </div>
+
+            <div id="loadSelect" style="display:inline-block;">
+                <select id="selections2">
+                    <option id="l" value="p" selected disabled> Levels</option>
+
+                </select>
+            </div>
+            <div id="load" style="display:inline-block;">
+                <button class="toolbarButton" id="loadbutton"> <img src="./img/upload_icon.png"> </button>
+            </div>
+
+        </div>
+
+        <div id="aSelect1" style="display:none; position: fixed; bottom: 50px; right: 0;">
+            <select id="selections" ;>
+                <option value="p" selected="selected">Player</option>
+                <option value="e">Enemy</option>
+                <option value="f">Platform</option>
+                <option value="b">Breakable</option>
+                <option value="a">Assignment</option>
+                <option value="m">Midterm</option>
+                <option value="l">Final</option>
+                <option value="d">Delete</option>
+            </select>
+        </div>
+
+        <div id="backLE" style="display:none;">
+            <button onclick="backMainMenu()">Back</button>
+        </div>
+
+        <div id="play" style="display:none;">
+            <button id="play">Play</button>
+        </div>
+
+    </div>
+
+    <script>
+        var username = "";
+        var token = "";
+        let canvas = document.getElementById('ctx');
+        let canvasG = document.getElementById('ctx_uiLE');
+        let ctx = canvas.getContext('2d');
+        let canvasLE = document.getElementById('ctxLE');
+        let ctxLE = canvasLE.getContext('2d');
+        let ctx_uiLE = canvasG.getContext('2d');
+        let canvasui = document.getElementById('ctx-ui');
+        let ctxui = canvasui.getContext('2d');
+        let fromLe = false;
+        let levelSTR;
+        let levelW;
+        let totAss = 0;
+        let grade = 0;
+        let compTime = Date.now();
+        let snd = new Audio("music/Good Will Hunting OST - 02 The Theorem.mp3");
+        let snd2 = new Audio("music/Winterbells Extended Original song.mp3");
+        let snd3 = new Audio("music/Mario Death Sound Effect.mp3");
+        let deathY = 0;
+        let start = Date.now();
+        let signDivSignIn = document.getElementById('signDiv-signIn');
+        let signDivSignUp = document.getElementById('signDiv-signUp');
+        let newGame = document.getElementById('newGame');
+        let loadGame = document.getElementById('loadGame');
+        let levelEditorB = document.getElementById('levelEditorB');
+        let loadFile = document.getElementById('loadFile');
+        let a1 = document.getElementById('selections');
+        let a3 = document.getElementById('selections2');
+        let userControls = document.getElementById('controlSelect');
+        let a2 = document.getElementById('loadSelect');
+        let loadButton = document.getElementById('loadbutton')
+        let play = document.getElementById('play');
+        let save = document.getElementById('save');
+        let usernameText = document.getElementById('username');
+        let profile = document.getElementById('profile');
+        let tokenText = document.getElementById('token');
+        let saveLevelText = document.getElementById('level');
+        let keyUp = controls["up"];
+        let keyDown = controls["down"];
+        let keyRight = controls["right"];
+        let keyLeft = controls["left"];
+        let keyPause = controls["pause"];
+        let keyGrapple = controls["grapple"];
+        let keyChange = controls["change"];
+        let weaponPowerUpsChange = controls["weaponPowerUpsChange"];
+        let powerUpsChange = controls["powerUpsChange"];
+        let applyWeaponsPowerUp = controls["applyWPUP"];
+        let applyPowerUp = controls["applyPUP"];
+        let weaponPowerUp;
+        let powerUp;
+        let wPUCount = 0;
+        let PUCount = 0;
+        let W = 1280;
+        let H = 720;
+        let screen = 'menu';
+        let count = 0;
+        let check = true
+        let leDraw = false;
+        let levelEditorLevels;
+        let campaign;
+        let campaignInput = document.getElementById('campaignInput');
+        let startNewGame = document.getElementById('startNewGame');
+        moveScreen = MoveScreen(0, 0, );
+        let FAC = 'math';
+        let inTown = false;
+        let money;
+        let gammaHP;
+        let dadCredit;
+        let workCredit;
+        let land = document.getElementById('LandscapeButton');
+        let cTime = 0;
+        let campaignLevelName;
+        // Images import
+        var Img = {};
+        Img.playerLevel = new Image();
+        Img.playerLevel.src = "img/player_level.png";
+        Img.penLeft = new Image();
+        Img.penLeft.src = "img/pen_left.png";
+        Img.penRight = new Image();
+        Img.penRight.src = "img/pen_right.png";
+        Img.philEnemy = new Image();
+        Img.philEnemy.src = "img/aristotleOpen.png";
+        Img.mathEnemy = new Image();
+        Img.mathEnemy.src = "img/gauss_open.png";
+        Img.phyEnemy = new Image();
+        Img.phyEnemy.src = "img/Albert_open.png";
+        Img.csEnemy = new Image();
+        Img.csEnemy.src = "img/turing_open.png";
+        Img.ass = new Image();
+        Img.ass.src = "img/assigment.png";
+        Img.final = new Image();
+        Img.final.src = "img/final.png";
+        Img.platform = new Image();
+        Img.platform.src = "img/tile.png";
+        Img.breakable = new Image();
+        Img.breakable.src = "img/break_tile.png";
+        Img.midterm = new Image();
+        Img.midterm.src = "img/midterm.png";
+        Img.upgrade = new Image();
+        Img.upgrade.src = "img/powerup.png";
+        Img.gUpgrade = new Image();
+        Img.gUpgrade.src = "img/gun_up.png";
+        Img.bUpgrade = new Image();
+        Img.bUpgrade.src = "img/melee_up.png";
+        Img.bgMath = new Image();
+        Img.bgMath.src = "img/math1.png";
+        Img.bgPhy = new Image();
+        Img.bgPhy.src = "img/phy1.png";
+        Img.bgPhil = new Image();
+        Img.bgPhil.src = "img/phil1.png";
+        Img.bgCs = new Image();
+        Img.bgCs.src = "img/cs1.png";
+        Img.town = new Image();
+        Img.town.src = "img/town.png";
+        Img.campus = new Image();
+        Img.campus.src = "img/campus.png";
+        let bg = "img/math1.png";
+        let deathScreenControl = 0;
+
+        // The next set of update functions provide funtionality for when the players
+        // recieve money from various parts of the game. They each update the players'
+        // money and save the game. Most also check a condition which will determine
+        // if a player's moneyw will be updated or not.
+
+        // updateMoney checks workCredit and give the player money for completing
+        // work at the landscaping company
+        updateMoney = function() {
+            if (workCredit > 0) {
+                money = money + 400;
+                workCredit--;
+            } else {
+                levelFailed();
+            }
+            saveCurrentCampaignGame(getCourses(), getInventory());
+        }
+        // checkonGrandma gets called every time money is borrowed from grandma,
+        // it checks grandma's hp and determines if she remains available.
+        checkonGrandma = function() {
+
+            if (gammaHP != 0) {
+                grandmaHouse.style.display = 'inline-block';
+                grandmaHouseAfter.style.display = 'none';
+            } else {
+                grandmaHouseAfter.style.display = 'inline-block';
+                grandmaHouse.style.display = 'none';
+            }
+            saveCurrentCampaignGame(getCourses(), getInventory());
+        }
+        // updateGrandma checks grandma's hp and updates the players money.
+        updateGrandma = function() {
+            if (gammaHP != 0) {
+                money = money + 1500;
+                gammaHP--;
+            }
+            saveCurrentCampaignGame(getCourses(), getInventory());
+        }
+        // updateDad checks dadCredits and gives player a random amount of money
+        //  between $800 and $400
+        updateDad = function() {
+            if (dadCredit != 0) {
+                let randMoney = Math.floor(Math.random() * (800 - 400 + 1)) + 400;
+                money = money + randMoney;
+                dadCredit--;
+            }
+            saveCurrentCampaignGame(getCourses(), getInventory());
+        }
+        // updateWinery checks workCredit and updates players' money by $1000
+        updateWinery = function() {
+            if (workCredit > 0) {
+                money = money + 1000;
+                workCredit = workCredit - 2;
+            }
+            saveCurrentCampaignGame(getCourses(), getInventory());
+        }
+        // updateFish updates the players money by a random number between $700
+        // and $300 no matter what. Only unlimited source of income in the game.
+        updateFish = function() {
+            let randFish = Math.floor(Math.random() * (700 - 300 + 1)) + 300;
+            money = money + randFish;
+            saveCurrentCampaignGame(getCourses(), getInventory());
+        }
+        // clickHandler for the buttons accociated with menus that provied money
+        // to player.
+        var isFirxFox = function() {
+            return navigator.userAgent.indexOf("Firefox") > 0 ? true : false;
+        }
+
+        var clickHandler = function(target) {
+            if (target == "backCourse") {
+                leaveRoom();
+            } else if (target == "LandscapeButton") {
+                updateMoney();
+                leaveRoom();
+            } else if (target == "GrandmaButton") {
+                updateGrandma();
+                leaveRoom();
+            } else if (target == "wineryButton") {
+                updateWinery()
+                leaveRoom();
+            } else if (target == "dadButton") {
+                updateDad();
+                leaveRoom();
+            } else if (target == "fishButton") {
+                updateFish()
+                leaveRoom();
+            } else {
+                leaveRoom();
+                loadCourseLevel(target);
+            }
+
+        }
+
+        var coursesButtonGroup = document.getElementById("coursesButtonGroup");
+
+        coursesButtonGroup.addEventListener("click", function(event) {
+
+            var targetId;
+            if (isFirxFox()) {
+                //for Firefox
+                targetId = event.target.id;
+            } else {
+                //For IE, Chrome
+                targetId = event.srcElement.id;
+            }
+            clickHandler(targetId);
+
+        });
+
+        //testing collision of rectangles
+        testCollisionRects = function(rect1, rect2) {
+            return rect1.x <= rect2.x + rect2.width && rect2.x <= rect1.x + rect1.width && rect1.y <= rect2.y + rect2.height && rect2.y <= rect1.y + rect1.height;
+        }
+
+        //action listeners for mouse
+        document.onmousedown = function(mouse) {
+            if (mouse.which == 1) {
+                if (screen == 'game' || screen == 'overworld') {
+                    player.lMouseClick = true;
+                } else if (screen == 'le') {
+                    let selection = globalValueButton;
+                    mousePos.code = selection;
+                    if (leDraw) {
+                        mousePos.draw();
+                    }
+                }
+            } else {
+                player.rMouseClick = true;
+            }
+        }
+        document.onmouseup = function(mouse) {
+            if (mouse.which == 1) {
+                player.lMouseClick = false;
+            } else {
+                player.rMouseClick = false;
+            }
+        }
+        document.oncontextmenu = function(mouse) {
+            mouse.preventDefault();
+        }
+        document.onmousemove = function(mouse) {
+            let mouseX = mouse.clientX - canvas.getBoundingClientRect().left;
+            let mouseY = mouse.clientY - canvas.getBoundingClientRect().top;
+
+            if (screen == 'game' || screen == 'overworld') {
+                mouseX -= W / 2;
+                mouseY -= H / 2;
+                player.aimAngle = Math.atan2(mouseY, mouseX) / Math.PI * 180;
+            } else if (screen == 'le') {
+
+                if (mouseY > 18 && mouseY < 738 && mouseX > 0 && mouseX < 1280) {
+                    mousePos.x = mouseX;
+                    mousePos.y = mouseY;
+                    leDraw = true;
+                } else {
+                    leDraw = false;
+                }
+            }
+
+        }
+        document.onkeydown = function(event) {
+            if (screen == 'game' || screen == 'overworld') {
+                if (event.keyCode == keyUp) {
+                    player.upPress = true;
+                } else if (event.keyCode == keyDown) {
+                    player.downPress = true;
+                } else if (event.keyCode == keyRight) {
+                    player.rightPress = true;
+                } else if (event.keyCode == keyLeft) {
+                    player.leftPress = true;
+                }  else if (event.keyCode == keyGrapple) {
+                    player.grapplePress = true;
+                } else if (event.keyCode == keyChange) {
+                    if (player.weap == 0) {
+                        player.weap = 1;
+                    } else {
+                        player.weap = 0;
+                    }
+                } else if (event.keyCode == weaponPowerUpsChange) {
+                    cycleWeaponPowerUps();
+                } else if (event.keyCode == powerUpsChange) {
+                    cyclePowerUps();
+                }
+            } else if (screen == 'le') {
+                if (event.keyCode == keyUp) {
+                    if (mousePos.yoff < 0) {
+                        mousePos.yoff++;
+                    }
+                } else if (event.keyCode == keyDown) {
+                    mousePos.yoff--;
+                } else if (event.keyCode == keyRight) {
+                    mousePos.xoff--;
+                } else if (event.keyCode == keyLeft) {
+                    if (mousePos.xoff < 0) {
+                        mousePos.xoff++;
+                    }
+                }
+            } else if (playerProfile.style.display != "none") {
+                console.log(event.which);
+                inputControl.value = "";
+                updateControls(userControls.options[userControls.selectedIndex].text, event.which);
+                console.log(controls);
+                buildControlsTable();
+            }
+        }
+        document.onkeyup = function(event) {
+            if (event.keyCode == keyUp)
+                player.upPress = false;
+            else if (event.keyCode == keyDown)
+                player.downPress = false;
+            else if (event.keyCode == keyRight)
+                player.rightPress = false;
+            else if (event.keyCode == keyLeft)
+                player.leftPress = false;
+            else if (event.keyCode == keyGrapple)
+                player.grapplePress = false;
+            if (screen == 'game') {
+                if (event.keyCode == applyPowerUp) {
+                    if (player.usePU) {
+                        player.usePU = false;
+                    } else {
+                        player.usePU = true;
+                    }
+                } else if (event.keyCode == applyWeaponsPowerUp) {
+                    if (player.useWPU) {
+                        player.useWPU = false;
+                    } else {
+                        player.useWPU = true;
+                    }
+                }
+            }
+        }
+
+        // Main game update function. All primary checks and triggers that need to be
+        // done on a frame by frame basis come from here.
+        update = function() {
+            // main triggers for overworld
+            if (screen == 'overworld' && !inTown) {
+                campusBoundaries();
+                if (player.x < -25) {
+                    inTown = true;
+                    player.x = 1200;
+                }
+                if ((player.x > 630 && player.x < 690) && (player.y > 160 && player.y < 180)) {
+                    enterRoom("COMP");
+                } else if ((player.x > 940 && player.x < 980) && (player.y > 190 && player.y < 210)) {
+                    enterRoom("PHYS");
+                } else if ((player.x > 960 && player.x < 1050) && (player.y > 650 && player.y < 670)) {
+                    enterRoom("MATH");
+                } else if ((player.x > 640 && player.x < 670) && (player.y > 645 && player.y < 670)) {
+                    enterRoom("PHIL");
+                }
+            } else if (inTown && screen == 'overworld') {
+                townBoundaries();
+                if (player.x > 1200) {
+                    inTown = false;
+                    player.x = 25;
+                }
+                if ((player.x < 140 && player.x > 60) && (player.y < 435 && player.y > 295)) {
+                    enterRoom("LAND");
+                } else if ((player.x > 520 && player.x < 560) && (player.y > 470 && player.y < 525)) {
+                    enterRoom("GRANDMA");
+                } else if ((player.x > 45 && player.x < 75) && (player.y > 640 && player.y < 655)) {
+                    enterRoom("WINE");
+                } else if ((player.x > 285 && player.x < 320) && (player.y > 440 && player.y < 455)) {
+                    enterRoom("DAD");
+                } else if ((player.x > 635 && player.x < 660) && (player.y > 115 && player.y < 130)) {
+                    enterRoom("FISH");
+                }
+            }
+            // setting background image
+            let bgImg = new Image();
+            if (screen == "le" || screen == "game") {
+                if (FAC == "math") {
+                    bgImg.src = 'img/math1.png';
+                } else if (FAC == "phil") {
+                    bgImg.src = "img/phil1.png";
+                } else if (FAC == "phys") {
+                    bgImg.src = "img/phy1.png";
+                } else if (FAC == "comp") {
+                    bgImg.src = "img/cs1.png";
+                }
+            } else if (screen == 'overworld') {
+                if (!inTown) {
+                    bgImg.src = 'img/campus.png';
+                } else {
+                    bgImg.src = 'img/town.png';
+                }
+            }
+            // HUD for various screen states
+            if (screen == 'game' || screen == 'overworld') {
+                ctx.clearRect(0, 0, W, H);
+                ctx.drawImage(bgImg, 0, 0, W, H);
+                ctxui.clearRect(0, 0, W, H);
+                ctxui.font = "35px Arial";
+                ctxui.fillStyle = "#FF0000";
+                if (screen == 'game') {
+                    ctxui.fillText("HP: " + player.hp, 50, 50);
+                    cTime = (cTime + Date.now() - start) / 1000;
+                    let timeRnd = cTime.toFixed(2);
+                    ctxui.fillText("Time: " + timeRnd + " seconds", 50, 90);
+                    if (campaign != null) {
+                        ctxui.fillText("WPU :" + weaponPowerUp, 50, 170);
+                        ctxui.fillText("PU :" + powerUp, 50, 130);
+                    }
+                }
+                if (screen == 'overworld') {
+                    ctxui.fillText("Money: " + money, 50, 50);
+                    ctxui.fillText("Dad Credits: " + dadCredit, 300, 50);
+                    ctxui.fillText("Work Credits: " + workCredit, 600, 50);
+                    //ctxui.fillstyle = "white";
+                    //ctxui.stokestle = "white";
+                }
+
+            } else if (screen == 'le') {
+                ctxLE.clearRect(0, 0, W, H);
+                ctxLE.drawImage(bgImg, 0, 0, W, H);
+            }
+            // entiry update calls
+            player.update();
+            Enemy.update();
+            Projectile.update();
+            Final.update();
+            if (screen == 'game' || screen == 'le') {
+                Platform.update();
+            }
+
+            Upgrade.update();
+        }
+        // faculty change sets bacground and enemy appearence
+        let facChange = function() {
+            if (document.getElementById('background').value == 'img/math1.png') {
+                FAC = 'math';
+                Enemy.facChange();
+            } else if (document.getElementById('background').value == 'img/phil1.png') {
+                FAC = 'phil';
+                Enemy.facChange();
+            } else if (document.getElementById('background').value == 'img/phy1.png') {
+                FAC = 'phys';
+                Enemy.facChange();
+            } else if (document.getElementById('background').value == 'img/cs1.png') {
+                FAC = 'comp';
+                Enemy.facChange();
+            }
+        }
+        // checks to make sure that a valid username and password are entered
+        function valid(userName, pass) {
+            if (!isEmpty(userName) && !isEmpty(pass)) {
+                return true;
+            }
+
+        }
+
+        function isEmpty(str) {
+            return (!str || 0 === str.length);
+        }
+
+        // creates player profile in database on signUp
+        signDivSignUp.onclick = function() {
+
+            user = document.getElementById('signDiv-username').value;
+            pass = document.getElementById('signDiv-password').value;
+
+            if (valid(user, pass)) {
+                var socket = io();
+                socket.emit('signUp', {
+                    username: user,
+                    password: pass,
+                });
+                socket.on('accountCreated', function(message) {
+                    console.log(message);
+                    if (message.accountCreated == true) console.log("account Created");
+                });
+            }
+        }
+        // chekcs for players' existing data on login.
+        signDivSignIn.onclick = function() {
+            console.log("signDivSignIn HIT")
+            console.log(controls);
+            user = document.getElementById('signDiv-username').value;
+            pass = document.getElementById('signDiv-password').value;
+
+            let check = true
+
+            if (valid(user, pass && check)) {
+                check = false;
+                var socket = io();
+                socket.emit('signIn', {
+                    username: user,
+                    password: pass,
+                });
+
+                socket.on('signedIn', function(message) { //AccountManager
+                    msg = message;
+                    token = message.token;
+                    if (message.signedIn == true) {
+                        username = message.userName;
+                        token = message.token;
+                        usernameText.value = username;
+                        snd2.play();
+                        let playerName = "mario";
+                        let diffuculty = "hard";
+                        let progress = "false"; //used for mid-term
+                        let inventory = "1001";
+                        document.getElementById('signDiv-password').value;
+                        signDiv.style.display = 'none';
+                        mainMenu.style.display = 'inline-block';
+                        back.style.display = 'inline';
+                        Entity.clear();
+                    }
+                });
+            }
+        }
+        // implements the back button for various screen states
+        function backMainMenu() {
+            console.log("s " + screen);
+            if (screen == "menu") {
+                mainMenu.style.display = 'none';
+                back.style.display = 'none';
+                backLE.style.display = 'none';
+                playerProfile.style.display = 'none';
+                signDiv.style.display = 'inline-block';
+                campaignInput.style.display = 'none';
+            }
+
+            if (screen == "playerProfile") {
+                playerProfile.style.display = 'none';
+                mainMenu.style.display = 'inline-block';
+            }
+
+            if (screen == "newGame") {
+                mainMenu.style.display = 'inline-block';
+                campaignInput.style.display = "none";
+            }
+
+            if (screen == "le" || screen == "game" || screen == "overworld") {
+                levelEditor.style.display = 'none';
+                selections.style.display = 'none';
+                loadFile.style.display = 'none';
+                gameDiv.style.display = 'none';
+                back.style.display = 'none';
+                menuWrapper.style.display = "inline-block";
+                mainMenu.style.display = 'inline-block';
+                back.style.display = 'inline';
+                screen = "menu";
+            }
+
+
+        }
+        // implements save functionality of level editor
+        save.onclick = function() {
+            let socket = io();
+            level = prompt("Please enter your Level name ", "enter new Level name :");
+            if (level != null) {
+                socket.emit('saveLevel', {
+                    username: username,
+                    levels: saveLevel(username, level, 2, mousePos.xmax, mousePos.ymax),
+                });
+                getSavedUserLevels();
+            }
+        }
+        // implements the laod level functionality in level editor
+        loadButton.onclick = function() {
+            loadLevel(levelEditorLevels[a3.options[a3.selectedIndex].index].Level, levelEditorLevels[a3.options[a3.selectedIndex].index].Width);
+        }
+        // provides the level Failed screen for level editor and campaign
+        levelFailed = function() {
+            screen = "menu";
+            gameDiv.style.display = 'none';
+            signDiv.style.display = 'none';
+            landscapingWork.style.display = 'none';
+            snd3.play();
+            if (fromLe == false) {
+                deathScreen.style.display = 'inline-block';
+            } else {
+                deathScreenLE.style.display = 'inline-block';
+            }
+        }
+        // house keeping after the player dies to make sure that level is exited
+        // smoothly in campaign
+        function afterdeath() {
+            deathScreen.style.display = 'none';
+            leaveRoom();
+            Entity.clear();
+        }
+        // house keeping after the player dies to make sure that level is exited
+        // smoothly in levelEditor
+        afterdeathLE = function() {
+            deathScreenLE.style.display = 'none';
+            Entity.clear();
+            levelEditor.style.display = 'inline-block';
+            screen = "le";
+            loadLevel(levelSTR, levelW);
+        }
+        // level completed menu displays when the player defeats a final.
+        // level time is displayed and grade is calculated.
+        levelCompleted = function() {
+            screen = "menu";
+            gameDiv.style.display = 'none';
+            signDiv.style.display = 'none';
+            gradeCalculator();
+            let elem;
+            if (fromLe == false) {
+                elem = document.getElementById("passLevelHeading");
+                completeLevel(campaignLevelName);
+                succsessScreen.style.display = 'inline-block';
+                completeLevel(campaignLevelName);
+            } else {
+                elem = document.getElementById("passLevelHeadingLE");
+                succsessScreenLE.style.display = 'inline-block';
+            }
+            compTime = Date.now() - start;
+            console.log('Completed level in ' + compTime + ' ms.');
+            compTime = compTime / 1000;
+            let str = 'Completed level in ' + compTime + "</br>" + "Completed with a grade of :" + grade;
+            elem.innerHTML = str;
+            Entity.clear();
+        }
+        // housekeeping after a player wins a level
+        function aftersuccess() {
+            succsessScreen.style.display = 'none';
+            leaveRoom();
+            Entity.clear();
+        }
+
+        aftersuccessLE = function() {
+            succsessScreenLE.style.display = 'none';
+            Entity.clear();
+            levelEditor.style.display = 'inline-block';
+            screen = "le";
+            loadLevel(levelSTR, levelW);
+
+        }
+        // invoked when play is selected from level editor. Saves level and begins
+        // play time.
+        play.onclick = function() {
+            fromLe = true;
+            saveLevelLE(mousePos.xmax, mousePos.ymax);
+            gameDiv.style.display = "inline-block";
+            menuWrapper.style.display = "none"; //Getting rid of the menu wrapper
+            levelEditor.style.display = 'none';
+            screen = 'game';
+            start = Date.now();
+        }
+        // when new game is selected updates screen state
+        newGame.onclick = function() {
+            screen = "newGame";
+            campaignInput.style.display = "flex";
+            mainMenu.style.display = "none";
+        }
+        // creates new game and campaign collection in database
+        startNewGame.onclick = function() {
+            let socket = io();
+            menuWrapper.style.display = "none";
+            let info = {
+                playerName: document.getElementById('playerName').value,
+                difficulty: document.querySelector('input[name=difficulty]:checked').value
+            };
+            if (checkCampaignPlayerNameCheat(document.getElementById('playerName').value) == true) {
+                info.difficulty = 3;
+            }
+            socket.emit('createCampaign', {
+                username: username,
+                info: info
+
+            });
+
+            socket.on('campaignCreated', function(message) {
+                campaign = message.campaign;
+                gammaHP = message.campaign.SaveFile.saves[0].gammaHP;
+                money = message.campaign.SaveFile.saves[0].money;
+                dadCredit = message.campaign.SaveFile.saves[0].dadCredit;
+                workCredit = message.campaign.SaveFile.saves[0].workCredit;
+                weaponPowerUp = message.campaign.SaveFile.saves[0].inventory.weaponPowerUps[0].itemName;
+                powerUp = message.campaign.SaveFile.saves[0].inventory.powerUps[0].itemName;
+            });
+            gameDiv.style.display = "inline-block";
+            campaignInput.style.display = "none";
+            loadOverworld();
+        }
+
+        loadOverworld = function() {
+            Entity.clear();
+            coursesButtonGroup.style.display = 'none';
+            compMenu.style.display = 'none';
+            mathMenu.style.display = 'none';
+            physMenu.style.display = 'none';
+            philMenu.style.display = 'none';
+            menuWrapper.style.display = "none";
+            gameDiv.style.display = "none";
+            grandmaHouse.style.display = 'none';
+            grandmaHouseAfter.style.display = 'none';
+            landscapingWork.style.display = 'none';
+            winery.style.display = 'none';
+            dadHouse.style.display = 'none';
+            fishHouse.style.display = 'none';
+            menuWrapper.style.display = "none";
+            gameDiv.style.display = "inline-block";
+            loadFile.style.display = "none";
+            player.x = 300;
+            player.y = 350;
+            screen = 'overworld';
+        }
+
+
+        // loads course levels from database bases on name and brings them to client
+        getSystemCampaignLevel = function(courseName) {
+            let socket = io();
+            socket.emit('loadSystemCourseLevel', {
+                courseName: courseName
+            });
+
+            socket.on('systemCourseLevelFound', function(message) {
+                return message.courseLevel;
+            });
+
+        }
+        // housekeeping for completing a level. Adds to work credits, adds to
+        // completed courses, saves game state.
+        completeLevel = function(courseName) {
+            dadCredit++;
+            workCredit++;
+            let courses = getCourses();
+            let unlockedLevel = getUnlockedCourseName(courseName);
+            let control = 0;
+            for (let x = 0; x < courses.length; x++) {
+                if (courses[x] != null) {
+                    if (courses[x].Levelname == courseName) {
+                        courses[x].complete = true;
+                    }
+                    if (courses[x].Levelname == unlockedLevel) {
+                        control = 1;
+                    }
+                }
+            }
+
+            if (unlockedLevel != 'none') {
+                if (control == 0) {
+                    let socket = io();
+                    socket.emit('loadSystemCourseLevel', {
+                        courseName: unlockedLevel
+                    });
+                    socket.on('systemCourseLevelFound', function(message) {
+                        let courseLevel = message.courseLevel;
+                        if (courseLevel != null) {
+                            courseLevel.midterm = false;
+                            courseLevel.midtermTime = 0;
+                            courseLevel.complete = false;
+                            if (courseLevel.grade < grade) {
+                                courseLevel.grade = grade;
+                            }
+                            if (courseLevel.bestTime < compTime) {
+                                courseLevel.bestTime = compTime;
+                            }
+                            courses.push(courseLevel);
+                            saveCurrentCampaignGame(courses, getInventory());
+                        }
+                    });
+                }
+
+            } else {
+                saveCurrentCampaignGame(courses, getInventory());
+            }
+        }
+        // loads course level from database, updates money accordingly, starts level time,
+        //  saves game
+        loadCourseLevel = function(courseName) {
+            var gotInLevel = false;
+            var gotMoney = false;
+            let courses = getCourses();
+            gameDiv.style.display = "inline-block";
+            menuWrapper.style.display = 'none'; //hiding menu wrapper
+            levelEditor.style.display = 'none';
+            save.style.display = 'none';
+            backLE.style.display = "none";
+            play.style.display = "none";
+            campaignInput.style.display = "none";
+            start = Date.now();
+            campaignLevelName = courseName;
+            for (let x = 0; x < courses.length; x++) {
+                if (courses[x] != null) {
+                    if (courseName == courses[x].Levelname) {
+                        gotInLevel = true;
+                        if (courses[x].midterm == true) {
+                            gotMoney = true;
+                            deathScreenControl = 1;
+                            loadLevel(courses[x].Level, courses[x].Width);
+                            screen = 'game';
+                        } else {
+                            if ((money - 1000) >= 0) {
+                                gotMoney = true;
+                                money = money - 1000
+                                saveCurrentCampaignGame(courses, getInventory());
+                                deathScreenControl = 1;
+                                loadLevel(courses[x].Level, courses[x].Width);
+                                screen = 'game';
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (!gotInLevel) {
+                alert("You don't meet the prerequisites!");
+            } else if (!gotMoney) {
+                alert("You don't have enough money!");
+            }
+        }
+        // trigger for laod game button
+        loadGame.onclick = function() {
+            mainMenu.style.display = 'none';
+            loadFile.style.display = 'inline-block';
+            screen = 'game';
+            loadUserCampaigns();
+
+        }
+        //  onclick for profile menu button
+        profile.onclick = function() {
+            playerProfile.style.display = 'inline-block';
+            mainMenu.style.display = 'none';
+            screen = 'playerProfile';
+            console.log("profile hit");
+            buildUserInputDropDown();
+            buildControlsTable();
+        }
+        // enterRoom manages the screen state when enter in a building from them
+        // overworld
+        enterRoom = function(roomName) {
+            coursesButtonGroup.style.display = 'inline';
+            if (roomName == "COMP") {
+                mathMenu.style.display = 'none';
+                physMenu.style.display = 'none';
+                philMenu.style.display = 'none';
+                compMenu.style.display = 'inline-block';
+            } else if (roomName == "MATH") {
+                mathMenu.style.display = 'inline-block';
+            } else if (roomName == "PHYS") {
+                compMenu.style.display = 'none';
+                mathMenu.style.display = 'none';
+                philMenu.style.display = 'none';
+                physMenu.style.display = 'inline-block';
+            } else if (roomName == "PHIL") {
+                philMenu.style.display = 'inline-block';
+                compMenu.style.display = 'none';
+                mathMenu.style.display = 'none';
+                physMenu.style.display = 'none';
+            } else if (roomName == "LAND") {
+                compMenu.style.display = 'none';
+                mathMenu.style.display = 'none';
+                physMenu.style.display = 'none';
+                philMenu.style.display = 'none';
+                menuWrapper.style.display = "none";
+                gameDiv.style.display = "none";
+                grandmaHouse.style.display = 'none';
+                dadHouse.style.display = 'none';
+                fishHouse.style.display = 'none';
+                landscapingWork.style.display = 'inline-block';
+            } else if (roomName == "GRANDMA") {
+                compMenu.style.display = 'none';
+                mathMenu.style.display = 'none';
+                physMenu.style.display = 'none';
+                philMenu.style.display = 'none';
+                menuWrapper.style.display = "none";
+                gameDiv.style.display = "none";
+                landscapingWork.style.display = 'none';
+                winery.style.display = 'none';
+                dadHouse.style.display = 'none';
+                fishHouse.style.display = 'none';
+                checkonGrandma();
+            } else if (roomName == "WINE") {
+                compMenu.style.display = 'none';
+                mathMenu.style.display = 'none';
+                physMenu.style.display = 'none';
+                philMenu.style.display = 'none';
+                menuWrapper.style.display = "none";
+                gameDiv.style.display = "none";
+                grandmaHouse.style.display = 'none';
+                landscapingWork.style.display = 'none';
+                dadHouse.style.display = 'none';
+                fishHouse.style.display = 'none';
+                winery.style.display = 'inline-block';
+            } else if (roomName == "DAD") {
+                compMenu.style.display = 'none';
+                mathMenu.style.display = 'none';
+                physMenu.style.display = 'none';
+                philMenu.style.display = 'none';
+                menuWrapper.style.display = "none";
+                gameDiv.style.display = "none";
+                grandmaHouse.style.display = 'none';
+                landscapingWork.style.display = 'none';
+                winery.style.display = 'none';
+                fishHouse.style.display = 'none';
+                dadHouse.style.display = 'inline-block';
+            } else if (roomName == "FISH") {
+                compMenu.style.display = 'none';
+                mathMenu.style.display = 'none';
+                physMenu.style.display = 'none';
+                philMenu.style.display = 'none';
+                menuWrapper.style.display = "none";
+                gameDiv.style.display = "none";
+                grandmaHouse.style.display = 'none';
+                landscapingWork.style.display = 'none';
+                winery.style.display = 'none';
+                dadHouse.style.display = 'none';
+                fishHouse.style.display = 'inline-block';
+
+            }
+
+        }
+        // clears menu screens when exiting a building calls load overworld
+        leaveRoom = function(roomName) {
+            coursesButtonGroup.style.display = 'none';
+            loadOverworld();
+        }
+        // retrieves user created levels for display and editing in the level editor
+        getSavedUserLevels = function() {
+            let socket = io();
+            if (username == "system") {
+                socket.emit('loadAllSystemCourses', {});
+                socket.on('systemLevelsFound', function(message) {
+                    levelEditorLevels = message.Levels;
+                    a3.innerHTML = "";
+                    var option = document.createElement("s");
+                    for (var x = 0; x < message.Levels.length; x++) {
+                        let optionLevel = document.createElement("option");
+                        optionLevel.text = message.Levels[x].Levelname;
+                        a3.add(optionLevel);
+                    }
+                });
+
+            } else {
+                socket.emit('getUserLevels', {
+                    username: username
+                });
+                socket.on('userLevelsFound', function(message) {
+                    levelEditorLevels = message.Levels;
+                    a3.innerHTML = "";
+                    var option = document.createElement("s");
+                    for (var x = 0; x < message.Levels.length; x++) {
+                        console.log(message.Levels[x].Levelname);
+                        let optionLevel = document.createElement("option");
+                        optionLevel.text = message.Levels[x].Levelname;
+                        a3.add(optionLevel);
+                    }
+                });
+            }
+
+        }
+        // loads players' campaign from the database
+        loadUserCampaigns = function() {
+            let socket = io();
+            socket.emit('getUserCampaigns', {
+                token: token
+            });
+            socket.on('loadUserCampaigns', function(message) {
+                Campaigns = message.campaigns;
+                loadFile.innerHTML = "";
+                for (var x = 0; x < message.campaigns.length; x++) {
+                    buildCampaignListButton(message.campaigns[x]);
+                }
+            });
+        }
+        let savesCounter = 0;
+        let userSaves;
+        loadCampaignSaveFiles = function(campaignNumber) {
+            let socket = io();
+            let saveHeader = document.createElement("P");
+            let t = document.createTextNode("Saves From Campaign " + campaignNumber);
+            saveHeader.appendChild(t);
+            if (savesCounter == 0) {
+                loadFile.appendChild(saveHeader);
+                savesCounter = 1;
+            } else {
+                loadFile.removeChild(loadFile.lastElementChild);
+                loadFile.removeChild(loadFile.lastElementChild);
+                loadFile.appendChild(saveHeader);
+
+            }
+            socket.emit('getUserCampaignSaves', {
+                token: token,
+                campaignNumber: campaignNumber
+            });
+            socket.on('loadUserCampaignSaves', function(message) {
+                for (var x = 0; x < message.saves.length; x++) {
+                    buildSavesButton(message.saves[x]);
+                }
+                userSaves = message.saves;
+            });
+        }
+        // creates saves button for selection upon loading a game
+        buildSavesButton = function(saveInfo) {
+            var save = document.createElement("button");
+            var t = document.createTextNode("Save " + saveInfo.saveNumber);
+            save.setAttribute("onclick", "loadSavedGame(" + saveInfo.saveNumber + ")");
+            save.appendChild(t);
+            loadFile.appendChild(save);
+        }
+        // main laod game function. retrieves campaign data from database and
+        //  brings it to client
+        loadSavedGame = function(saveNumber) {
+            let count = 0;
+            for (var x = 0; x < userSaves.length; x++) {
+                if (userSaves[x].saveNumber == saveNumber) {
+                    console.log(userSaves[x]);
+                    money = userSaves[x].money;
+                    gammaHP = userSaves[x].gammaHP;
+                    dadCredit = userSaves[x].dadCredit;
+                    workCredit = userSaves[x].workCredit;
+                    count = x;
+                    weaponPowerUp = userSaves[x].inventory.weaponPowerUps[0].itemName;
+                    powerUp = userSaves[x].inventory.powerUps[0].itemName;
+                    deathScreenControl = 1;
+                    loadOverworld();
+                }
+            }
+            userSaves = userSaves[count];
+        }
+        //  cretes the campaign number button when loading a game
+        buildCampaignListButton = function(CampaignInfo) {
+            var campaignButton = document.createElement("button");
+            var t = document.createTextNode(CampaignInfo.campaignNumber);
+            campaignButton.setAttribute("onclick", "loadCampaignSaveFiles(" + CampaignInfo.campaignNumber + ")");
+            campaignButton.appendChild(t);
+            loadFile.appendChild(campaignButton);
+        }
+
+        //use this to save current game
+        saveCurrentCampaignGame = function(courses, inventory) {
+            if (campaign == null) {
+                userSaves.money = money;
+                userSaves.gammaHP = gammaHP;
+                userSaves.dadCredit = dadCredit;
+                userSaves.workCredit = workCredit;
+                userSaves.saveDate = Date();
+                userSaves.Courses = courses;
+                userSaves.inventory = inventory;
+                saveCurrentGame(userSaves);
+            } else {
+                campaign.SaveFile.saves[0].money = money;
+                campaign.SaveFile.saves[0].gammaHp = gammaHP;
+                campaign.SaveFile.saves[0].dadCredit = dadCredit;
+                campaign.SaveFile.saves[0].workCredit = workCredit;
+                campaign.SaveFile.saves[0].saveDate = Date();
+                campaign.SaveFile.saves[0].Courses = courses;
+                campaign.SaveFile.saves[0].inventory = inventory
+                saveCurrentGame(campaign.SaveFile.saves[0]);
+            }
+        }
+        // saaves game to database
+        saveCurrentGame = function(save) {
+            let socket = io();
+            socket.emit('saveCurrentGame', {
+                username: username,
+                campaignNumber: save.campaignNumber,
+                saveNumber: save.saveNumber,
+                save: save
+            });
+        }
+
+        //use this to save new save
+        saveNewCampaignGame = function(courses, inventory) {
+            if (campaign == null) {
+                userSaves.money = money;
+                userSaves.gammaHP = gammaHP;
+                userSaves.dadCredit = dadCredit;
+                userSaves.workCredit = workCredit;
+                userSaves.saveDate = Date();
+                userSaves.Courses = courses;
+                userSaves.inventory = inventory;
+                saveNewCampaignSave(userSaves);
+            } else {
+                campaign.SaveFile.saves[0].money = money;
+                campaign.SaveFile.saves[0].gammaHP = gammaHP;
+                campaign.SaveFile.saves[0].dadCredit = dadCredit;
+                campaign.SaveFile.saves[0].workCredit = workCredit;
+                campaign.SaveFile.saves[0].saveDate = Date();
+                campaign.SaveFile.saves[0].Courses = courses;
+                campaign.SaveFile.saves[0].inventory = inventory
+                saveNewCampaignSave(campaign.SaveFile.saves[0]);
+            }
+        }
+        // saves new game to database
+        saveNewCampaignSave = function(save) {
+            let socket = io();
+            socket.emit('saveNewSave', {
+                username: username,
+                campaignNumber: save.campaignNumber,
+                save: save
+            });
+        }
+        // gets players progress from database
+        getCourses = function() {
+            if (campaign == null) {
+                return userSaves.Courses;
+            } else {
+                return campaign.SaveFile.saves[0].Courses;
+            }
+        }
+        //  gets players inventory from database
+        getInventory = function() {
+            if (campaign == null) {
+                return userSaves.inventory;
+            } else {
+                return campaign.SaveFile.saves[0].inventory;
+            }
+        }
+        // allows player to cycle through weapon power ups
+        cycleWeaponPowerUps = function() {
+            wPUCount++;
+            if (campaign == null) {
+                if (wPUCount >= userSaves.inventory.weaponPowerUps.length - 1) {
+                    wPUCount = 0;
+                }
+                weaponPowerUp = userSaves.inventory.weaponPowerUps[wPUCount].itemName;
+            } else {
+                if (wPUCount > campaign.SaveFile.saves[0].inventory.weaponPowerUps.length - 1) {
+                    wPUCount = 0;
+                }
+                weaponPowerUp = campaign.SaveFile.saves[0].inventory.weaponPowerUps[wPUCount].itemName;
+            }
+        }
+
+        cyclePowerUps = function() {
+            PUCount++;
+            if (campaign == null) {
+                if (PUCount >= userSaves.inventory.powerUps.length - 1) {
+                    PUCount = 0;
+                }
+                powerUp = userSaves.inventory.powerUps[PUCount].itemName;
+            } else {
+                if (PUCount > campaign.SaveFile.saves[0].inventory.powerUps.length - 1) {
+                    PUCount = 0;
+                }
+                powerUp = campaign.SaveFile.saves[0].inventory.powerUps[PUCount].itemName;
+            }
+        }
+
+        buildUserInputDropDown = function() {
+            for (var control in controls) {
+                let optionControl = document.createElement("option");
+                optionControl.text = control;
+                userControls.add(optionControl);
+            }
+        }
+
+        buildControlsTable = function() {
+
+            var table = document.getElementById("controlsTable");
+            table.innerHTML = "";
+            for (var control in controls) {
+                var row = table.insertRow(0);
+                var cell1 = row.insertCell(0);
+                var cell2 = row.insertCell(1);
+                cell1.innerHTML = control;
+                cell2.innerHTML = outputControls(controls[control]);;
+            }
+            var row = table.insertRow(0);
+            var cell1 = row.insertCell(0);
+            var cell2 = row.insertCell(1);
+            cell1.innerHTML = "Action";
+            cell2.innerHTML = "Control";
+        }
+        // listener for level editor button
+        levelEditorB.onclick = function() {
+            Entity.clear();
+            deathScreenControl = 1;
+            getSavedUserLevels();
+            mainMenu.style.display = 'none';
+            menuWrapper.style.display = "none";
+            selections.style.display = 'inline';
+            a2.style.display = 'inline';
+            levelEditor.style.display = 'inline-block';
+            save.style.display = 'inline-block';
+            load.style.display = 'inline-block';
+            back.style.display = "none";
+            backLE.style.display = "inline-block";
+            play.style.display = 'inline-block';
+            for (let i = 0; i < 1280; i += 64) {
+                ctx_uiLE.beginPath();
+                ctx_uiLE.moveTo(i, 0)
+                ctx_uiLE.lineTo(i, 720);
+                ctx_uiLE.stroke();
+            }
+            for (let i = 0; i < 720; i += 64) {
+                ctx_uiLE.beginPath();
+                ctx_uiLE.moveTo(0, i);
+                ctx_uiLE.lineTo(1280, i);
+                ctx_uiLE.stroke();
+            }
+            snd2.muted = true;
+            snd.play();
+            screen = 'le';
+        }
+
+        // loads collision boundaries for overworld map
+        campusBoundaries = function() {
+            for (let key in Platform.list) {
+                delete Platform.list[key];
+            }
+            Platform.generate(665, 110); // door
+            Platform.generate(740, 190);
+            Platform.generate(800, 175);
+            Platform.generate(845, 270);
+            Platform.generate(835, 400);
+            Platform.generate(835, 460);
+            Platform.generate(740, 500);
+            Platform.generate(510, 520);
+            Platform.generate(480, 400);
+            Platform.generate(550, 185);
+            Platform.generate(455, 230);
+            Platform.generate(385, 145);
+            Platform.generate(1035, 220);
+            Platform.generate(955, 140);
+            Platform.generate(1000, 145);
+            Platform.generate(1000, 120);
+            Platform.generate(950, 120);
+            Platform.generate(1200, -5);
+            Platform.generate(1240, 65);
+            Platform.generate(640, 105);
+            Platform.generate(640, 41);
+            Platform.generate(640, 30);
+            Platform.generate(670, 30);
+            Platform.generate(980, 600); //door
+            Platform.generate(800, 175);
+            Platform.generate(1020, 570);
+            Platform.generate(1020, 550);
+            Platform.generate(980, 500);
+            Platform.generate(1012, 500);
+            Platform.generate(950, 540);
+            Platform.generate(660, 600);
+            Platform.generate(665, 335);
+            Platform.generate(350, 145);
+            Platform.generate(350, 81);
+            Platform.generate(414, 70);
+            Platform.generate(430, 70);
+            Platform.generate(430, 134);
+            Platform.generate(170, -35);
+            Platform.generate(90, 29);
+            Platform.generate(90, 93);
+            Platform.generate(90, 157);
+            Platform.generate(90, 221);
+            Platform.generate(26, 221);
+            Platform.generate(90, 400);
+            Platform.generate(26, 400);
+            Platform.generate(90, 464);
+            Platform.generate(90, 528);
+            Platform.generate(90, 592);
+            Platform.generate(90, 656);
+            screen = 'overworld';
+        }
+
+        townBoundaries = function() {
+            for (let key in Platform.list) {
+                delete Platform.list[key];
+            }
+            Platform.generate(775, 500);
+            Platform.generate(745, 500);
+            Platform.generate(839, 500);
+            Platform.generate(910, 610);
+            Platform.generate(755, 625);
+            Platform.generate(570, 455);
+            Platform.generate(480, 570);
+            Platform.generate(280, 590);
+            Platform.generate(280, 526);
+            Platform.generate(70, 580);
+            Platform.generate(555, 300);
+            Platform.generate(645, 55);
+            Platform.generate(565, 30);
+            Platform.generate(365, 45);
+            Platform.generate(365, 0);
+            Platform.generate(415, 240);
+            Platform.generate(351, 240);
+            Platform.generate(287, 240);
+            Platform.generate(125, 75);
+            Platform.generate(189, 35);
+            Platform.generate(75, 370);
+            Platform.generate(0, 370);
+            Platform.generate(0, 420);
+            Platform.generate(825, 15);
+            Platform.generate(825, 79);
+            Platform.generate(805, 143);
+            Platform.generate(805, 207);
+            Platform.generate(879, 271);
+            Platform.generate(943, 271);
+            Platform.generate(1007, 271);
+            Platform.generate(1061, 271);
+            Platform.generate(1125, 271);
+            Platform.generate(950, 450);
+            Platform.generate(990, 514);
+            Platform.generate(1054, 578);
+            Platform.generate(1054, 642);
+
+        }
+
+        player = Player(-64, -64);
+        mousePos = MousePos(0, 0, 0, 0, 'p');
+        setInterval(update, 30);
+
+        let gradeCalculator = function() {
+            let hpRat = player.hp / player.hpTot;
+            let assRat = 1;
+            if (totAss > 0) {
+                assRat = player.assScore / totAss;
+            }
+            grade = 50 * hpRat * assRat;
+            grade += 50;
+        }
+    </script>
+</body>
+</HTML>
